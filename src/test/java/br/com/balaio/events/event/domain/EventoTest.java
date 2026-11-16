@@ -31,18 +31,38 @@ public class EventoTest {
     }
 
     @Test
+    void deveRetornarFalseQuandoForPendenteEPublicado(){
+
+        Evento evento = EventoTestBuilder.umEvento()
+                .comStatusAprovacao(StatusAprovacao.PENDENTE)
+                .comStatusPublicacao(StatusPublicacao.PUBLICADO)
+                .build();
+
+        boolean resultado = evento.isPublicamenteVisivel();
+
+        assertFalse(resultado);
+    }//11
+
+    @Test
     void deveRetornarFalseQuandoForAprovadoENaoPublicado(){
 
-        Long id = 111111111L;
-        String slug = "feira_de_artesanato";
-        String nome = "Feira_de_Artesanato";
-        String tipo = "Feira";
-        String organizador = "Organização Balaio";
-        String descricao = "Evento cultural de Pernambuco";
-        StatusAprovacao statusAprovacao = StatusAprovacao.APROVADO;
-        StatusPublicacao statusPublicacao = StatusPublicacao.NAO_PUBLICADO;
+        Evento evento = EventoTestBuilder.umEvento()
+                            .comStatusAprovacao(StatusAprovacao.APROVADO)
+                            .comStatusPublicacao(StatusPublicacao.NAO_PUBLICADO)
+                            .build();
 
-        Evento evento = new Evento(id,slug,nome,tipo,organizador,descricao,statusAprovacao,statusPublicacao);
+        boolean resultado = evento.isPublicamenteVisivel();
+
+        assertFalse(resultado);
+    }//11
+
+    @Test
+    void deveRetornarFalseQuandoForRejeitadoENaoPublicado(){
+
+        Evento evento = EventoTestBuilder.umEvento()
+                .comStatusAprovacao(StatusAprovacao.REJEITADO)
+                .comStatusPublicacao(StatusPublicacao.NAO_PUBLICADO)
+                .build();
 
         boolean resultado = evento.isPublicamenteVisivel();
 
@@ -50,18 +70,12 @@ public class EventoTest {
     }
 
     @Test
-    void deveRetornarFalseQuandoForRejeitadoENaoPublicado(){
+    void deveRetornarFalseQuandoForRejeitadoEPublicado(){
 
-        Long id = 111111111L;
-        String slug = "feira_de_artesanato";
-        String nome = "Feira_de_Artesanato";
-        String tipo = "Feira";
-        String organizador = "Organização Balaio";
-        String descricao = "Evento cultural de Pernambuco";
-        StatusAprovacao statusAprovacao = StatusAprovacao.REJEITADO;
-        StatusPublicacao statusPublicacao = StatusPublicacao.NAO_PUBLICADO;
-
-        Evento evento = new Evento(id,slug,nome,tipo,organizador,descricao,statusAprovacao,statusPublicacao);
+        Evento evento = EventoTestBuilder.umEvento()
+                .comStatusAprovacao(StatusAprovacao.REJEITADO)
+                .comStatusPublicacao(StatusPublicacao.PUBLICADO)
+                .build();
 
         boolean resultado = evento.isPublicamenteVisivel();
 
@@ -70,16 +84,11 @@ public class EventoTest {
 
     @Test
     void deveRetornarTrueQuandoForAprovadoEPublicado(){
-        Long id = 111111111L;
-        String slug = "feira_de_artesanato";
-        String nome = "Feira_de_Artesanato";
-        String tipo = "Feira";
-        String organizador = "Organização Balaio";
-        String descricao = "Evento cultural de Pernambuco";
-        StatusAprovacao statusAprovacao = StatusAprovacao.APROVADO;
-        StatusPublicacao statusPublicacao = StatusPublicacao.PUBLICADO;
 
-        Evento evento = new Evento(id,slug,nome,tipo,organizador,descricao,statusAprovacao,statusPublicacao);
+        Evento evento = EventoTestBuilder.umEvento()
+                .comStatusAprovacao(StatusAprovacao.APROVADO)
+                .comStatusPublicacao(StatusPublicacao.PUBLICADO)
+                .build();
 
         boolean resultado = evento.isPublicamenteVisivel();
 
