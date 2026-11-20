@@ -11,22 +11,13 @@ public class EventoTest {
     @Test
     void deveRetornarFalseQuandoForPendenteENaoPublicado(){
 
-        // arranjo|arrange
-        Long id = 111111111L;
-        String slug = "feira_de_artesanato";
-        String nome = "Feira_de_Artesanato";
-        String tipo = "Feira";
-        String organizador = "Organização Balaio";
-        String descricao = "Evento cultural de Pernambuco";
-        StatusAprovacao statusAprovacao = StatusAprovacao.PENDENTE;
-        StatusPublicacao statusPublicacao = StatusPublicacao.NAO_PUBLICADO;
+        Evento evento = EventoTestBuilder.umEvento()
+                .comStatusAprovacao(StatusAprovacao.PENDENTE)
+                .comStatusPublicacao(StatusPublicacao.NAO_PUBLICADO)
+                .build();
 
-        Evento evento = new Evento(id,slug,nome,tipo,organizador,descricao,statusAprovacao,statusPublicacao);
-
-        // execução|act
         boolean resultado = evento.isPublicamenteVisivel();
 
-        // assert
         assertFalse(resultado);
     }
 

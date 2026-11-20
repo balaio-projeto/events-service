@@ -18,16 +18,10 @@ public class ConsultarEventosPublicosUseCaseTest {
         EventoRepositoryPort repository =
                 mock(EventoRepositoryPort.class);
 
-        Evento evento = new Evento(
-                1L,
-                "feira-de-artesanato",
-                "Feira de Artesanato",
-                "Feira",
-                "Organização Balaio",
-                "Evento cultural",
-                StatusAprovacao.APROVADO,
-                StatusPublicacao.PUBLICADO
-        );
+        Evento evento = EventoTestBuilder.umEvento()
+                .comStatusAprovacao(StatusAprovacao.APROVADO)
+                .comStatusPublicacao(StatusPublicacao.PUBLICADO)
+                .build();
 
         List<Evento> eventosEsperados = List.of(evento);
 

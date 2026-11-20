@@ -3,6 +3,12 @@ server:
 spring:
   application:
     name: events-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://events-db:5432/balaio_events}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
   jpa:
     open-in-view: false
     hibernate:

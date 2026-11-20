@@ -1,5 +1,8 @@
 package br.com.balaio.events.event.domain;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+
 public class EventoTestBuilder {
     private Long id = 111111111L;
     private String slug = "feira_de_artesanato";
@@ -9,6 +12,20 @@ public class EventoTestBuilder {
     private String descricao = "Evento cultural de Pernambuco";
     private StatusAprovacao statusAprovacao = StatusAprovacao.PENDENTE;
     private StatusPublicacao statusPublicacao = StatusPublicacao.NAO_PUBLICADO;
+
+    private LocalDate dataInicio = LocalDate.of(2026, 11, 20);
+    private LocalDate dataFim = LocalDate.of(2026, 11, 22);
+
+    private LocalTime horarioInicio = LocalTime.of(9, 0);
+    private LocalTime horarioFim = LocalTime.of(18, 0);
+
+    private String entrada = "Gratuita";
+    private String cidade = "Olinda";
+    private String local = "Centro Histórico";
+    private String endereco = "Endereço de exemplo, Olinda - PE";
+
+    private Double latitude = -8.0138;
+    private Double longitude = -34.8553;
 
     private EventoTestBuilder(){
     }
@@ -28,10 +45,25 @@ public class EventoTestBuilder {
     }
 
     public Evento build(){
-        return new Evento(
-                id,slug,nome,tipo,
-                organizador,descricao,
-                statusAprovacao,statusPublicacao
-        );
+            return new Evento(
+                    id,
+                    slug,
+                    nome,
+                    tipo,
+                    organizador,
+                    descricao,
+                    statusAprovacao,
+                    statusPublicacao,
+                    dataInicio,
+                    dataFim,
+                    horarioInicio,
+                    horarioFim,
+                    entrada,
+                    cidade,
+                    local,
+                    endereco,
+                    latitude,
+                    longitude
+            );
     }
 }
