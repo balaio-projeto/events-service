@@ -13,6 +13,12 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+balaio:
+  jwt:
+    # Somente chave PÚBLICA. O events-service nunca emite token nem recebe chave privada.
+    public-key-location: ${JWT_PUBLIC_KEY_LOCATION:}
+    issuer: ${JWT_ISSUER:}
+    audience: ${JWT_AUDIENCE:}
 management:
   endpoints:
     web:
