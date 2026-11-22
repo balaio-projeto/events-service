@@ -42,3 +42,23 @@ Health: `http://localhost:8085/actuator/health`.
 ## Migrações
 
 Migrações SQL versionadas ficam em `src/main/resources/db/migration`.
+
+## Autorização local e JWT — PI-210
+
+O events-service valida o Bearer por conta própria, sem depender do gateway. Usa somente a **chave pública** do emissor (`JWT_PUBLIC_KEY_LOCATION`, aceita caminho simples ou `file:`), com `JWT_ISSUER` e `JWT_AUDIENCE`. Não há acesso ao banco do profile nem chave privada no serviço.
+
+Regras aplicadas (`br.com.balaio.events.security`):
+
+| Rota | Permitido | Negado |
+| --- | --- | --- |
+| `GET /api/v1/eventos/**` | público | — (JWT inválido é rejeitado mesmo aqui) |
+| `POST /api/v1/eventos` | papel `organizador` | sem JWT → 401; comprador, artesão e admin → 403 |
+| `/api/v1/admin/**` (decisão, PI-205) | papel `admin` | organizador → 403 |
+
+- Claims reaplicadas: RS256, `iss`, `aud`, `sub` UUID canônico, `papel` conhecido, `jti` presente, vida ≤ 3600 s, `iat` sem antecipação relevante.
+- A identidade é `ChamadorAutenticado.de(jwt)`, derivada apenas do `sub` validado. Headers como `X-Role`/`X-User-Id` e campos do corpo (`organizadorId`, `papel`) são ignorados.
+- Erros seguem o envelope `{dados, erro}` com `NAO_AUTENTICADO` (401) e `SEM_PERMISSAO` (403).
+
+Limitação: o papel de um JWT já emitido vale até `exp`. Uma promoção administrativa só vale após novo login.
+
+Estado: a autorização está pronta, mas a API de submissão, persistência e moderação (PI-205) ainda não existe neste serviço. `EventsServiceApplicationTests` já falhava antes desta entrega por falta de datasource; não foi alterado. Os testes de segurança usam slice web (`@WebMvcTest`) e não dependem de banco.
