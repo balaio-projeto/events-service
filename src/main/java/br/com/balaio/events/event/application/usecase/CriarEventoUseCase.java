@@ -16,31 +16,35 @@ public class CriarEventoUseCase {
         this.repository = repository;
     }
 
-    public Evento executar(Evento evento) {
+    public Evento executar(Evento entrada) {
 
-        if (repository.existePorSlug(evento.slug())) {
+        if (repository.existePorSlug(entrada.slug())) {
             throw new EventoJaExistenteException();
         }
 
         Evento novoEvento = new Evento(
                 null,
-                evento.slug(),
-                evento.nome(),
-                evento.tipo(),
-                evento.organizador(),
-                evento.descricao(),
+                entrada.slug(),
+                entrada.nome(),
+                entrada.tipo(),
+                entrada.organizador(),
+                entrada.descricao(),
                 StatusAprovacao.PENDENTE,
                 StatusPublicacao.NAO_PUBLICADO,
-                evento.dataInicio(),
-                evento.dataFim(),
-                evento.horarioInicio(),
-                evento.horarioFim(),
-                evento.entrada(),
-                evento.cidade(),
-                evento.local(),
-                evento.endereco(),
-                evento.latitude(),
-                evento.longitude()
+                entrada.dataInicio(),
+                entrada.dataFim(),
+                entrada.horarioInicio(),
+                entrada.horarioFim(),
+                entrada.entrada(),
+                entrada.cidade(),
+                entrada.local(),
+                entrada.endereco(),
+                entrada.latitude(),
+                entrada.longitude(),
+                entrada.periodo(),
+                entrada.horario(),
+                entrada.artesaos(),
+                entrada.coletivos()
         );
 
         return repository.salvar(novoEvento);

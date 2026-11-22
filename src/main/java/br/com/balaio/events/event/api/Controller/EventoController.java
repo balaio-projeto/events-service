@@ -9,6 +9,7 @@ import br.com.balaio.events.event.application.usecase.CriarEventoUseCase;
 import br.com.balaio.events.event.domain.Evento;
 import br.com.balaio.events.event.domain.StatusAprovacao;
 import br.com.balaio.events.event.domain.StatusPublicacao;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -37,12 +38,17 @@ public class EventoController {
     @GetMapping
     public ApiResponse<List<EventoResponse>> listarEventos(
             @RequestParam(required = false) Double lat,
-            @RequestParam(required = false) Double lng)
-    {
-        List<Evento> eventos;
-
+            @RequestParam(required = false) Double lng
+    ) {
         try {
-            eventos = useCase.executar(lat, lng);
+            List<EventoResponse> dados = useCase
+                    .executar(lat, lng)
+                    .stream()
+                    .map(EventoResponse::fromDomain)
+                    .toList();
+
+            return new ApiResponse<>(dados, null);
+
         } catch (IllegalArgumentException ex) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -50,11 +56,6 @@ public class EventoController {
                     ex
             );
         }
-        List<EventoResponse> respostas = eventos.stream()
-                .map(EventoResponse::fromDomain)
-                .toList();
-
-        return new ApiResponse<>(respostas, null);
     }
 
     @GetMapping("/{slug}")
@@ -68,10 +69,9 @@ public class EventoController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<EventoResponse>> criarEvento(
-            @RequestBody CriarEventoRequest request
+            @Valid @RequestBody CriarEventoRequest request
     ) {
-
-        Evento novoEvento = new Evento(
+        Evento entrada = new Evento(
                 null,
                 request.slug(),
                 request.nome(),
@@ -88,16 +88,21 @@ public class EventoController {
                 request.cidade(),
                 request.local(),
                 request.endereco(),
-                request.latitude(),
-                request.longitude()
+                request.lat(),
+                request.lng(),
+                request.periodo(),
+                request.horario(),
+                request.artesaos(),
+                request.coletivos()
         );
 
-        Evento eventoSalvo = criarEventoUseCase.executar(novoEvento);
-
-        EventoResponse response = EventoResponse.fromDomain(eventoSalvo);
+        Evento salvo = criarEventoUseCase.executar(entrada);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(new ApiResponse<>(response, null));
+                .body(new ApiResponse<>(
+                        EventoResponse.fromDomain(salvo),
+                        null
+                ));
     }
 }

@@ -19,7 +19,7 @@ public class EventoPersistenceAdapter implements EventoRepositoryPort {
         this.repository = repository;
     }
 
-    private Evento toDomain(EventoJpaEntity entity){
+    private Evento toDomain(EventoJpaEntity entity) {
         return new Evento(
                 entity.getId(),
                 entity.getSlug(),
@@ -38,7 +38,11 @@ public class EventoPersistenceAdapter implements EventoRepositoryPort {
                 entity.getLocal(),
                 entity.getEndereco(),
                 entity.getLatitude(),
-                entity.getLongitude()
+                entity.getLongitude(),
+                entity.getPeriodo(),
+                entity.getHorario(),
+                entity.getArtesaos(),
+                entity.getColetivos()
         );
     }
 
