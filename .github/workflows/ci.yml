@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-e-testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: balaio_events
+          POSTGRES_USER: balaio_events_app
+          POSTGRES_PASSWORD: balaio-ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U balaio_events_app -d balaio_events"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/balaio_events
+      SPRING_DATASOURCE_USERNAME: balaio_events_app
+      SPRING_DATASOURCE_PASSWORD: balaio-ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Build e testes
+        run: |
+          chmod +x mvnw
+          ./mvnw -B verify
