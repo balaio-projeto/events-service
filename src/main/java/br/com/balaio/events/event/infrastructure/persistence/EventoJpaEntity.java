@@ -7,9 +7,11 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "eventos")
@@ -40,6 +42,11 @@ public class EventoJpaEntity {
         this.horario = evento.horario();
         this.artesaos = evento.artesaos();
         this.coletivos = evento.coletivos();
+        this.organizadorId = evento.organizadorId();
+        this.submetidoEm = evento.submetidoEm();
+        this.decididoPor = evento.decididoPor();
+        this.decididoEm = evento.decididoEm();
+        this.motivoRejeicao = evento.motivoRejeicao();
     }
 
     @Id
@@ -112,6 +119,21 @@ public class EventoJpaEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "coletivos", nullable = false, columnDefinition = "jsonb")
     private List<String> coletivos;
+
+    @Column(name = "organizador_id")
+    private UUID organizadorId;
+
+    @Column(name = "submetido_em", nullable = false)
+    private Instant submetidoEm;
+
+    @Column(name = "decidido_por")
+    private UUID decididoPor;
+
+    @Column(name = "decidido_em")
+    private Instant decididoEm;
+
+    @Column(name = "motivo_rejeicao", columnDefinition = "TEXT")
+    private String motivoRejeicao;
 
     public Long getId() {
         return id;
@@ -199,5 +221,25 @@ public class EventoJpaEntity {
 
     public List<String> getColetivos() {
         return coletivos;
+    }
+
+    public UUID getOrganizadorId() {
+        return organizadorId;
+    }
+
+    public Instant getSubmetidoEm() {
+        return submetidoEm;
+    }
+
+    public UUID getDecididoPor() {
+        return decididoPor;
+    }
+
+    public Instant getDecididoEm() {
+        return decididoEm;
+    }
+
+    public String getMotivoRejeicao() {
+        return motivoRejeicao;
     }
 }

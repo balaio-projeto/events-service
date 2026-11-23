@@ -7,12 +7,20 @@ import br.com.balaio.events.event.application.usecase.CriarEventoUseCase;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class CriarEventoUseCaseTest {
+
+    private static final UUID ORGANIZADOR = UUID.fromString("11111111-2222-3333-4444-555555555555");
+    private static final Instant AGORA = Instant.parse("2026-11-22T12:00:00Z");
+    private static final Clock RELOGIO = Clock.fixed(AGORA, ZoneOffset.UTC);
 
     @Test
     void deveCriarEventoComoPendenteENaoPublicado() {
@@ -36,9 +44,9 @@ class CriarEventoUseCaseTest {
                 );
 
         CriarEventoUseCase useCase =
-                new CriarEventoUseCase(repository);
+                new CriarEventoUseCase(repository, RELOGIO);
 
-        Evento salvo = useCase.executar(entrada);
+        Evento salvo = useCase.executar(entrada, ORGANIZADOR);
 
         assertAll(
                 () -> assertNull(salvo.id()),
@@ -51,6 +59,10 @@ class CriarEventoUseCaseTest {
                         salvo.statusPublicacao()
                 ),
                 () -> assertFalse(salvo.isPublicamenteVisivel()),
+                () -> assertEquals(ORGANIZADOR, salvo.organizadorId()),
+                () -> assertEquals(AGORA, salvo.submetidoEm()),
+                () -> assertNull(salvo.decididoPor()),
+                () -> assertEquals(entrada.organizador(), salvo.organizador()),
                 () -> assertEquals(
                         List.of("maria-do-barro"),
                         salvo.artesaos()
@@ -85,11 +97,11 @@ class CriarEventoUseCaseTest {
                 .thenReturn(true);
 
         CriarEventoUseCase useCase =
-                new CriarEventoUseCase(repository);
+                new CriarEventoUseCase(repository, RELOGIO);
 
         assertThrows(
                 EventoJaExistenteException.class,
-                () -> useCase.executar(entrada)
+                () -> useCase.executar(entrada, ORGANIZADOR)
         );
 
         verify(repository).existePorSlug("slug-existente");
@@ -113,9 +125,9 @@ class CriarEventoUseCaseTest {
                 );
 
         CriarEventoUseCase useCase =
-                new CriarEventoUseCase(repository);
+                new CriarEventoUseCase(repository, RELOGIO);
 
-        Evento salvo = useCase.executar(entrada);
+        Evento salvo = useCase.executar(entrada, ORGANIZADOR);
 
         assertAll(
                 () -> assertEquals(

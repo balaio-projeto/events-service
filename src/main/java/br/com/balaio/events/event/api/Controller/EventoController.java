@@ -3,15 +3,19 @@ package br.com.balaio.events.event.api.Controller;
 import br.com.balaio.events.event.api.dto.ApiResponse;
 import br.com.balaio.events.event.api.dto.CriarEventoRequest;
 import br.com.balaio.events.event.api.dto.EventoResponse;
+import br.com.balaio.events.event.api.dto.EventoSubmetidoResponse;
 import br.com.balaio.events.event.application.usecase.ConsultarEventoPorSlugUseCase;
 import br.com.balaio.events.event.application.usecase.ConsultarEventosPublicosUseCase;
 import br.com.balaio.events.event.application.usecase.CriarEventoUseCase;
 import br.com.balaio.events.event.domain.Evento;
 import br.com.balaio.events.event.domain.StatusAprovacao;
 import br.com.balaio.events.event.domain.StatusPublicacao;
+import br.com.balaio.events.security.ChamadorAutenticado;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -68,8 +72,9 @@ public class EventoController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<EventoResponse>> criarEvento(
-            @Valid @RequestBody CriarEventoRequest request
+    public ResponseEntity<ApiResponse<EventoSubmetidoResponse>> criarEvento(
+            @Valid @RequestBody CriarEventoRequest request,
+            @AuthenticationPrincipal Jwt jwt
     ) {
         Evento entrada = new Evento(
                 null,
@@ -96,12 +101,12 @@ public class EventoController {
                 request.coletivos()
         );
 
-        Evento salvo = criarEventoUseCase.executar(entrada);
+        Evento salvo = criarEventoUseCase.executar(entrada, ChamadorAutenticado.de(jwt).contaId());
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(new ApiResponse<>(
-                        EventoResponse.fromDomain(salvo),
+                        EventoSubmetidoResponse.fromDomain(salvo),
                         null
                 ));
     }

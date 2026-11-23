@@ -4,8 +4,12 @@ import br.com.balaio.events.event.application.port.EventoRepositoryPort;
 import br.com.balaio.events.event.application.usecase.ConsultarEventoPorSlugUseCase;
 import br.com.balaio.events.event.application.usecase.ConsultarEventosPublicosUseCase;
 import br.com.balaio.events.event.application.usecase.CriarEventoUseCase;
+import br.com.balaio.events.event.application.usecase.DecidirEventoUseCase;
+import br.com.balaio.events.event.application.usecase.ListarEventosEmModeracaoUseCase;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.time.Clock;
 
 @Configuration
 public class EventoConfig {
@@ -22,6 +26,16 @@ public class EventoConfig {
 
     @Bean
     public CriarEventoUseCase criarEventoUseCase(EventoRepositoryPort repository) {
-        return new CriarEventoUseCase(repository);
+        return new CriarEventoUseCase(repository, Clock.systemUTC());
+    }
+
+    @Bean
+    public ListarEventosEmModeracaoUseCase listarEventosEmModeracaoUseCase(EventoRepositoryPort repository) {
+        return new ListarEventosEmModeracaoUseCase(repository);
+    }
+
+    @Bean
+    public DecidirEventoUseCase decidirEventoUseCase(EventoRepositoryPort repository) {
+        return new DecidirEventoUseCase(repository, Clock.systemUTC());
     }
 }

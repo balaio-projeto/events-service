@@ -13,6 +13,10 @@ Eventos, calendário e localização. O serviço é independente, usa Java 25 e 
 |---|---|---|---|
 | GET | `/api/v1/eventos` | Público | Lista eventos publicados. Aceita `lat` e `lng` opcionais para consulta por distância. Coordenadas inválidas retornam 400. |
 | GET | `/api/v1/eventos/{slug}` | Público | Detalhe de um evento. |
+| POST | `/api/v1/eventos` | Organizador | Submete um evento. O organizador vem do `sub` do JWT; a resposta `201` é `{slug, status: "PENDENTE"}`. Erros de validação trazem `erro.campos`; slug repetido retorna `409 EVENTO_JA_EXISTENTE`. |
+| GET | `/api/v1/admin/eventos?estado=` | Admin | Fila de moderação. `estado` aceita `PENDENTE` (padrão), `APROVADO` ou `REJEITADO`. |
+| GET | `/api/v1/admin/eventos/{slug}` | Admin | Detalhe do evento em qualquer estado, com organizador, submissão e decisão. |
+| POST | `/api/v1/admin/eventos/{slug}/decisao` | Admin | `{decisao: "aprovar" \| "rejeitar", motivo}`. Aprovar publica; rejeitar exige motivo. Repetir a mesma decisão devolve o estado atual; decisão contrária retorna `409 EVENTO_JA_DECIDIDO`. Registra `decididoPor` e `decididoEm`. |
 
 A especificação OpenAPI do serviço fica em `http://localhost:8085/v3/api-docs`, e a interface em `http://localhost:8085/swagger-ui.html`.
 
@@ -41,7 +45,7 @@ Health: `http://localhost:8085/actuator/health`.
 
 ## Migrações
 
-Migrações SQL versionadas ficam em `src/main/resources/db/migration`.
+Migrações SQL versionadas ficam em `src/main/resources/db/migration`. A `V3` adiciona os campos de moderação e a `V4` cria três eventos de demonstração aprovados e publicados (Recife, Olinda e Caruaru) para a agenda pública.
 
 ## Autorização local e JWT — PI-210
 
@@ -61,4 +65,4 @@ Regras aplicadas (`br.com.balaio.events.security`):
 
 Limitação: o papel de um JWT já emitido vale até `exp`. Uma promoção administrativa só vale após novo login.
 
-Estado: a autorização está pronta, mas a API de submissão, persistência e moderação (PI-205) ainda não existe neste serviço. `EventsServiceApplicationTests` já falhava antes desta entrega por falta de datasource; não foi alterado. Os testes de segurança usam slice web (`@WebMvcTest`) e não dependem de banco.
+Estado: submissão, fila e decisão (PI-205) estão implementadas sobre esta autorização. Os testes `EventoPersistenciaPostgresTest`, `ModeracaoEventosHttpTests` e `EventsServiceApplicationTests` precisam de PostgreSQL (variáveis `SPRING_DATASOURCE_*`); os testes de segurança usam slice web (`@WebMvcTest`) e não dependem de banco.

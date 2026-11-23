@@ -5,6 +5,7 @@ import br.com.balaio.events.event.domain.Evento;
 import br.com.balaio.events.event.domain.StatusAprovacao;
 import br.com.balaio.events.event.domain.StatusPublicacao;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +43,12 @@ public class EventoPersistenceAdapter implements EventoRepositoryPort {
                 entity.getPeriodo(),
                 entity.getHorario(),
                 entity.getArtesaos(),
-                entity.getColetivos()
+                entity.getColetivos(),
+                entity.getOrganizadorId(),
+                entity.getSubmetidoEm(),
+                entity.getDecididoPor(),
+                entity.getDecididoEm(),
+                entity.getMotivoRejeicao()
         );
     }
 
@@ -82,5 +88,31 @@ public class EventoPersistenceAdapter implements EventoRepositoryPort {
     @Override
     public boolean existePorSlug(String slug) {
         return repository.existsBySlug(slug);
+    }
+
+    @Override
+    public List<Evento> buscarPorStatusAprovacao(StatusAprovacao statusAprovacao) {
+        return repository.findByStatusAprovacaoOrderBySubmetidoEmAscIdAsc(statusAprovacao)
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
+    public Optional<Evento> buscarPorSlug(String slug) {
+        return repository.findBySlug(slug).map(this::toDomain);
+    }
+
+    @Override
+    @Transactional
+    public boolean registrarDecisao(Evento eventoDecidido) {
+        return repository.registrarDecisaoSePendente(
+                eventoDecidido.slug(),
+                eventoDecidido.statusAprovacao(),
+                eventoDecidido.statusPublicacao(),
+                eventoDecidido.decididoPor(),
+                eventoDecidido.decididoEm(),
+                eventoDecidido.motivoRejeicao()
+        ) == 1;
     }
 }
