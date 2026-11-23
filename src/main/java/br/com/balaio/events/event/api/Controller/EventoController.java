@@ -1,0 +1,113 @@
+package br.com.balaio.events.event.api.Controller;
+
+import br.com.balaio.events.event.api.dto.ApiResponse;
+import br.com.balaio.events.event.api.dto.CriarEventoRequest;
+import br.com.balaio.events.event.api.dto.EventoResponse;
+import br.com.balaio.events.event.api.dto.EventoSubmetidoResponse;
+import br.com.balaio.events.event.application.usecase.ConsultarEventoPorSlugUseCase;
+import br.com.balaio.events.event.application.usecase.ConsultarEventosPublicosUseCase;
+import br.com.balaio.events.event.application.usecase.CriarEventoUseCase;
+import br.com.balaio.events.event.domain.Evento;
+import br.com.balaio.events.event.domain.StatusAprovacao;
+import br.com.balaio.events.event.domain.StatusPublicacao;
+import br.com.balaio.events.security.ChamadorAutenticado;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/v1/eventos")
+public class EventoController {
+
+    private final ConsultarEventosPublicosUseCase useCase;
+    private final ConsultarEventoPorSlugUseCase consultarPorSlugUseCase;
+    private final CriarEventoUseCase criarEventoUseCase;
+
+    public EventoController(
+            ConsultarEventosPublicosUseCase useCase,
+            ConsultarEventoPorSlugUseCase consultarPorSlugUseCase,
+            CriarEventoUseCase criarEventoUseCase
+    ) {
+        this.useCase = useCase;
+        this.consultarPorSlugUseCase = consultarPorSlugUseCase;
+        this.criarEventoUseCase = criarEventoUseCase;
+    }
+
+    @GetMapping
+    public ApiResponse<List<EventoResponse>> listarEventos(
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng
+    ) {
+        try {
+            List<EventoResponse> dados = useCase
+                    .executar(lat, lng)
+                    .stream()
+                    .map(EventoResponse::fromDomain)
+                    .toList();
+
+            return new ApiResponse<>(dados, null);
+
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    ex.getMessage(),
+                    ex
+            );
+        }
+    }
+
+    @GetMapping("/{slug}")
+    public ApiResponse<EventoResponse> consultarPorSlug(@PathVariable String slug){
+        Evento evento = consultarPorSlugUseCase.executar(slug).orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND,"Evento não encontrado"
+        ));
+
+        return new ApiResponse<>(EventoResponse.fromDomain(evento),null);
+    }
+
+    @PostMapping
+    public ResponseEntity<ApiResponse<EventoSubmetidoResponse>> criarEvento(
+            @Valid @RequestBody CriarEventoRequest request,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        Evento entrada = new Evento(
+                null,
+                request.slug(),
+                request.nome(),
+                request.tipo(),
+                request.organizador(),
+                request.descricao(),
+                StatusAprovacao.PENDENTE,
+                StatusPublicacao.NAO_PUBLICADO,
+                request.dataInicio(),
+                request.dataFim(),
+                request.horarioInicio(),
+                request.horarioFim(),
+                request.entrada(),
+                request.cidade(),
+                request.local(),
+                request.endereco(),
+                request.lat(),
+                request.lng(),
+                request.periodo(),
+                request.horario(),
+                request.artesaos(),
+                request.coletivos()
+        );
+
+        Evento salvo = criarEventoUseCase.executar(entrada, ChamadorAutenticado.de(jwt).contaId());
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new ApiResponse<>(
+                        EventoSubmetidoResponse.fromDomain(salvo),
+                        null
+                ));
+    }
+}
