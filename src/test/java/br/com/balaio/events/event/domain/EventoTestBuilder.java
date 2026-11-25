@@ -49,6 +49,19 @@ public class EventoTestBuilder {
     private List<String> coletivos =
             List.of("coletivo-exemplo");
 
+    private DetalhesEvento detalhes = new DetalhesEvento(
+            "53020-140",
+            "Rua do Amparo",
+            "120",
+            "Amparo",
+            "Casa 2",
+            "Em frente à igreja",
+            "https://feira.example.com",
+            "Maria do Barro",
+            "(81) 99999-0000",
+            "maria@example.com"
+    );
+
     private EventoTestBuilder() {
     }
 
@@ -123,6 +136,11 @@ public class EventoTestBuilder {
         return this;
     }
 
+    public EventoTestBuilder comDetalhes(DetalhesEvento detalhes) {
+        this.detalhes = detalhes;
+        return this;
+    }
+
     public Evento build() {
         return new Evento(
                 id,
@@ -147,6 +165,6 @@ public class EventoTestBuilder {
                 horario,
                 artesaos,
                 coletivos
-        );
+        ).comDetalhes(detalhes);
     }
 }

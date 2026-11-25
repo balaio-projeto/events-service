@@ -1,10 +1,15 @@
 package br.com.balaio.events.event.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -19,6 +24,7 @@ import java.security.KeyPairGenerator;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -29,7 +35,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.ResultActions;
+
+import br.com.balaio.events.event.application.port.ContatoContaPort;
 
 import com.jayway.jsonpath.JsonPath;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -47,6 +56,13 @@ class ModeracaoEventosHttpTests {
     private static final UUID ADMIN = UUID.fromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
     private static final UUID COMPRADOR = UUID.fromString("99999999-8888-7777-6666-555555555555");
     private static final KeyPair CHAVE = gerarPar();
+    private static final String DETALHES = "\"cep\":\"50050000\",\"rua\":\"Rua da Aurora\",\"numero\":\"240\","
+            + "\"bairro\":\"Boa Vista\",\"complemento\":\"Galpão 3\",\"referencia\":\"Ao lado da ponte\","
+            + "\"site\":\"https://feira.example.com\",\"contatoNome\":\"Ana Ceramista\","
+            + "\"contatoTelefone\":\"(81) 98888-7777\",\"contatoEmail\":\"ana@example.com\",";
+
+    @MockitoBean
+    private ContatoContaPort contas;
 
     @Autowired
     private MockMvc mvc;
@@ -213,9 +229,139 @@ class ModeracaoEventosHttpTests {
 
         String slug = novoSlug("repetido");
         submeter(slug, "organizador", ORGANIZADOR).andExpect(status().isCreated());
-        submeter(slug, "organizador", ORGANIZADOR)
+        submeter(slug, "organizador", COMPRADOR)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.erro.codigo").value("EVENTO_JA_EXISTENTE"));
+    }
+
+    @Test
+    void enderecoDetalhadoEContatoSaoObrigatoriosNaSubmissao() throws Exception {
+        String semDetalhes = corpoEvento(novoSlug("sem-detalhes"))
+                .replace(DETALHES, "\"cep\":\"\",\"rua\":\" \",");
+        mvc.perform(post("/api/v1/eventos").header("Authorization", bearer("organizador", ORGANIZADOR))
+                        .contentType(MediaType.APPLICATION_JSON).content(semDetalhes))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro.codigo").value("REQUISICAO_INVALIDA"))
+                .andExpect(jsonPath("$.erro.campos.rua").value("Informe a rua do evento."))
+                .andExpect(jsonPath("$.erro.campos.numero", notNullValue()))
+                .andExpect(jsonPath("$.erro.campos.bairro", notNullValue()))
+                .andExpect(jsonPath("$.erro.campos.contatoNome", notNullValue()))
+                .andExpect(jsonPath("$.erro.campos.contatoTelefone", notNullValue()))
+                .andExpect(jsonPath("$.erro.campos.cep").doesNotExist())
+                .andExpect(jsonPath("$.erro.campos.site").doesNotExist())
+                .andExpect(jsonPath("$.erro.campos.contatoEmail").doesNotExist());
+
+        String formatosInvalidos = corpoEvento(novoSlug("formatos"))
+                .replace("\"cep\":\"50050000\"", "\"cep\":\"5005-000\"")
+                .replace("\"site\":\"https://feira.example.com\"", "\"site\":\"ftp://feira.example.com\"")
+                .replace("\"contatoTelefone\":\"(81) 98888-7777\"", "\"contatoTelefone\":\"98888-777\"")
+                .replace("\"contatoEmail\":\"ana@example.com\"", "\"contatoEmail\":\"ana@\"");
+        mvc.perform(post("/api/v1/eventos").header("Authorization", bearer("organizador", ORGANIZADOR))
+                        .contentType(MediaType.APPLICATION_JSON).content(formatosInvalidos))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro.campos.cep").value("Informe o CEP no formato 00000-000."))
+                .andExpect(jsonPath("$.erro.campos.site", notNullValue()))
+                .andExpect(jsonPath("$.erro.campos.contatoTelefone", notNullValue()))
+                .andExpect(jsonPath("$.erro.campos.contatoEmail", notNullValue()));
+    }
+
+    @Test
+    void reenvioComOMesmoSlugPeloMesmoOrganizadorDevolveOEventoJaSubmetido() throws Exception {
+        String slug = novoSlug("reenvio");
+
+        String primeira = submeter(slug, "organizador", ORGANIZADOR)
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        String reenvio = submeter(slug, "organizador", ORGANIZADOR)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.dados.slug").value(slug))
+                .andExpect(jsonPath("$.dados.status").value("PENDENTE"))
+                .andExpect(jsonPath("$.erro").doesNotExist())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(reenvio).isEqualTo(primeira);
+        mvc.perform(get("/api/v1/admin/eventos").header("Authorization", bearer("admin", ADMIN)))
+                .andExpect(jsonPath("$.dados[?(@.evento.slug == '" + slug + "')]", hasSize(1)));
+    }
+
+    @Test
+    void moderacaoMostraContatoDoEventoEContaQueSolicitou() throws Exception {
+        when(contas.consultar(ORGANIZADOR))
+                .thenReturn(Optional.of(new ContatoContaPort.Contato("Ana Organizadora", "ana.conta@example.com")));
+        String slug = novoSlug("solicitante");
+        submeter(slug, "organizador", ORGANIZADOR).andExpect(status().isCreated());
+
+        mvc.perform(get("/api/v1/admin/eventos/" + slug).header("Authorization", bearer("admin", ADMIN)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dados.contato.nome").value("Ana Ceramista"))
+                .andExpect(jsonPath("$.dados.contato.telefone").value("(81) 98888-7777"))
+                .andExpect(jsonPath("$.dados.contato.email").value("ana@example.com"))
+                .andExpect(jsonPath("$.dados.solicitante.id").value(ORGANIZADOR.toString()))
+                .andExpect(jsonPath("$.dados.solicitante.nome").value("Ana Organizadora"))
+                .andExpect(jsonPath("$.dados.solicitante.email").value("ana.conta@example.com"))
+                .andExpect(jsonPath("$.dados.evento.rua").value("Rua da Aurora"))
+                .andExpect(jsonPath("$.dados.evento.cep").value("50050-000"));
+
+        mvc.perform(get("/api/v1/admin/eventos").header("Authorization", bearer("admin", ADMIN)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dados[?(@.evento.slug == '" + slug + "')].solicitante.nome",
+                        hasItem("Ana Organizadora")));
+
+        decidir(slug, "{\"decisao\":\"aprovar\"}", ADMIN)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dados.solicitante.email").value("ana.conta@example.com"))
+                .andExpect(jsonPath("$.dados.contato.telefone").value("(81) 98888-7777"));
+    }
+
+    @Test
+    void moderacaoContinuaFuncionandoQuandoOProfileFalha() throws Exception {
+        when(contas.consultar(any())).thenThrow(new IllegalStateException("profile fora do ar"));
+        String slug = novoSlug("profile-falhou");
+        submeter(slug, "organizador", ORGANIZADOR).andExpect(status().isCreated());
+
+        mvc.perform(get("/api/v1/admin/eventos/" + slug).header("Authorization", bearer("admin", ADMIN)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dados.solicitante.id").value(ORGANIZADOR.toString()))
+                .andExpect(jsonPath("$.dados.solicitante.nome").value(nullValue()))
+                .andExpect(jsonPath("$.dados.solicitante.email").value(nullValue()))
+                .andExpect(jsonPath("$.dados.contato.nome").value("Ana Ceramista"));
+
+        mvc.perform(get("/api/v1/admin/eventos").header("Authorization", bearer("admin", ADMIN)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dados[*].evento.slug", hasItem(slug)));
+    }
+
+    @Test
+    void paginaPublicaMostraEnderecoDetalhadoMasNuncaOsDadosPrivados() throws Exception {
+        String slug = novoSlug("publico");
+        submeter(slug, "organizador", ORGANIZADOR).andExpect(status().isCreated());
+        decidir(slug, "{\"decisao\":\"aprovar\"}", ADMIN).andExpect(status().isOk());
+
+        String detalhe = mvc.perform(get("/api/v1/eventos/" + slug))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dados.cep").value("50050-000"))
+                .andExpect(jsonPath("$.dados.rua").value("Rua da Aurora"))
+                .andExpect(jsonPath("$.dados.numero").value("240"))
+                .andExpect(jsonPath("$.dados.bairro").value("Boa Vista"))
+                .andExpect(jsonPath("$.dados.complemento").value("Galpão 3"))
+                .andExpect(jsonPath("$.dados.referencia").value("Ao lado da ponte"))
+                .andExpect(jsonPath("$.dados.site").value("https://feira.example.com"))
+                .andExpect(jsonPath("$.dados.contatoNome").doesNotExist())
+                .andExpect(jsonPath("$.dados.contatoTelefone").doesNotExist())
+                .andExpect(jsonPath("$.dados.contatoEmail").doesNotExist())
+                .andExpect(jsonPath("$.dados.contato").doesNotExist())
+                .andExpect(jsonPath("$.dados.organizadorId").doesNotExist())
+                .andExpect(jsonPath("$.dados.solicitante").doesNotExist())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        String agenda = mvc.perform(get("/api/v1/eventos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dados[?(@.slug == '" + slug + "')].rua", hasItem("Rua da Aurora")))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        for (String publico : new String[] { detalhe, agenda }) {
+            assertThat(publico).doesNotContain("contatoNome", "contatoTelefone", "contatoEmail", "organizadorId",
+                    "Ana Ceramista", "98888-7777", "ana@example.com", ORGANIZADOR.toString());
+        }
     }
 
     @Test
@@ -280,7 +426,8 @@ class ModeracaoEventosHttpTests {
         return "{\"slug\":\"" + slug + "\",\"nome\":\"Feira de Teste\",\"tipo\":\"feira\","
                 + "\"organizador\":\"Associação dos Ceramistas\",\"descricao\":\"Venda direta de cerâmica.\","
                 + "\"periodo\":\"12 de setembro, 2026\",\"horario\":\"9h às 17h\",\"entrada\":\"Gratuita\","
-                + "\"cidade\":\"Petrolina\",\"local\":\"Orla\",\"endereco\":\"Orla, Petrolina - PE\","
+                + "\"cidade\":\"Petrolina\",\"local\":\"Orla\",\"endereco\":\"Rua da Aurora, 240 - Boa Vista\","
+                + DETALHES
                 + "\"lat\":-9.3891,\"lng\":-40.503,\"artesaos\":[],\"coletivos\":[]}";
     }
 
