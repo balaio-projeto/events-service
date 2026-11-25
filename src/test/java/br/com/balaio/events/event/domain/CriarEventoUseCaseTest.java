@@ -11,6 +11,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,6 +20,7 @@ import static org.mockito.Mockito.*;
 class CriarEventoUseCaseTest {
 
     private static final UUID ORGANIZADOR = UUID.fromString("11111111-2222-3333-4444-555555555555");
+    private static final UUID OUTRA_CONTA = UUID.fromString("99999999-8888-7777-6666-555555555555");
     private static final Instant AGORA = Instant.parse("2026-11-22T12:00:00Z");
     private static final Clock RELOGIO = Clock.fixed(AGORA, ZoneOffset.UTC);
 
@@ -35,8 +37,8 @@ class CriarEventoUseCaseTest {
                 .comColetivos(List.of("coletivo-alto-da-se"))
                 .build();
 
-        when(repository.existePorSlug(entrada.slug()))
-                .thenReturn(false);
+        when(repository.buscarPorSlug(entrada.slug()))
+                .thenReturn(Optional.empty());
 
         when(repository.salvar(any(Evento.class)))
                 .thenAnswer(invocation ->
@@ -78,6 +80,10 @@ class CriarEventoUseCaseTest {
                 () -> assertEquals(
                         entrada.horario(),
                         salvo.horario()
+                ),
+                () -> assertEquals(
+                        entrada.detalhes(),
+                        salvo.detalhes()
                 )
         );
 
@@ -85,7 +91,7 @@ class CriarEventoUseCaseTest {
     }
 
     @Test
-    void deveRejeitarSlugJaExistente() {
+    void deveRejeitarSlugJaUsadoPorOutraConta() {
         EventoRepositoryPort repository =
                 mock(EventoRepositoryPort.class);
 
@@ -93,8 +99,8 @@ class CriarEventoUseCaseTest {
                 .comSlug("slug-existente")
                 .build();
 
-        when(repository.existePorSlug("slug-existente"))
-                .thenReturn(true);
+        when(repository.buscarPorSlug("slug-existente"))
+                .thenReturn(Optional.of(entrada.submetidoPor(OUTRA_CONTA, AGORA)));
 
         CriarEventoUseCase useCase =
                 new CriarEventoUseCase(repository, RELOGIO);
@@ -104,8 +110,71 @@ class CriarEventoUseCaseTest {
                 () -> useCase.executar(entrada, ORGANIZADOR)
         );
 
-        verify(repository).existePorSlug("slug-existente");
+        verify(repository).buscarPorSlug("slug-existente");
         verify(repository, never()).salvar(any(Evento.class));
+    }
+
+    @Test
+    void reenvioDoMesmoOrganizadorDevolveOEventoJaSubmetidoSemCriarOutro() {
+        EventoRepositoryPort repository =
+                mock(EventoRepositoryPort.class);
+
+        Evento entrada = EventoTestBuilder.umEvento()
+                .comSlug("slug-reenviado")
+                .build();
+        Evento jaSubmetido = entrada.submetidoPor(ORGANIZADOR, AGORA.minusSeconds(30));
+
+        when(repository.buscarPorSlug("slug-reenviado"))
+                .thenReturn(Optional.of(jaSubmetido));
+
+        Evento devolvido = new CriarEventoUseCase(repository, RELOGIO)
+                .executar(entrada, ORGANIZADOR);
+
+        assertSame(jaSubmetido, devolvido);
+        verify(repository, never()).salvar(any(Evento.class));
+    }
+
+    @Test
+    void reenviosSimultaneosDoMesmoOrganizadorDevolvemOEventoGravadoPrimeiro() {
+        EventoRepositoryPort repository =
+                mock(EventoRepositoryPort.class);
+
+        Evento entrada = EventoTestBuilder.umEvento()
+                .comSlug("slug-simultaneo")
+                .build();
+        Evento gravadoPeloOutroEnvio = entrada.submetidoPor(ORGANIZADOR, AGORA);
+
+        when(repository.buscarPorSlug("slug-simultaneo"))
+                .thenReturn(Optional.empty(), Optional.of(gravadoPeloOutroEnvio));
+        when(repository.salvar(any(Evento.class)))
+                .thenThrow(new EventoJaExistenteException());
+
+        Evento devolvido = new CriarEventoUseCase(repository, RELOGIO)
+                .executar(entrada, ORGANIZADOR);
+
+        assertSame(gravadoPeloOutroEnvio, devolvido);
+    }
+
+    @Test
+    void envioSimultaneoDeOutraContaComMesmoSlugContinuaRecusado() {
+        EventoRepositoryPort repository =
+                mock(EventoRepositoryPort.class);
+
+        Evento entrada = EventoTestBuilder.umEvento()
+                .comSlug("slug-disputado")
+                .build();
+
+        when(repository.buscarPorSlug("slug-disputado"))
+                .thenReturn(Optional.empty(), Optional.of(entrada.submetidoPor(OUTRA_CONTA, AGORA)));
+        when(repository.salvar(any(Evento.class)))
+                .thenThrow(new EventoJaExistenteException());
+
+        CriarEventoUseCase useCase = new CriarEventoUseCase(repository, RELOGIO);
+
+        assertThrows(
+                EventoJaExistenteException.class,
+                () -> useCase.executar(entrada, ORGANIZADOR)
+        );
     }
 
     @Test

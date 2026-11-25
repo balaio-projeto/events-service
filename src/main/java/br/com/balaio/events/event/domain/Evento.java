@@ -34,7 +34,8 @@ public record Evento(
         Instant submetidoEm,
         UUID decididoPor,
         Instant decididoEm,
-        String motivoRejeicao
+        String motivoRejeicao,
+        DetalhesEvento detalhes
 ) {
 
     public static final int LIMITE_MOTIVO_REJEICAO = 1000;
@@ -66,10 +67,12 @@ public record Evento(
         this(id, slug, nome, tipo, organizador, descricao, statusAprovacao, statusPublicacao,
                 dataInicio, dataFim, horarioInicio, horarioFim, entrada, cidade, local, endereco,
                 latitude, longitude, periodo, horario, artesaos, coletivos,
-                null, null, null, null, null);
+                null, null, null, null, null, DetalhesEvento.VAZIO);
     }
 
     public Evento {
+        detalhes = detalhes == null ? DetalhesEvento.VAZIO : detalhes;
+
         artesaos = artesaos == null
                 ? List.of()
                 : List.copyOf(artesaos);
@@ -118,7 +121,18 @@ public record Evento(
                 StatusAprovacao.PENDENTE, StatusPublicacao.NAO_PUBLICADO,
                 dataInicio, dataFim, horarioInicio, horarioFim, entrada, cidade, local, endereco,
                 latitude, longitude, periodo, horario, artesaos, coletivos,
-                contaOrganizadora, quando, null, null, null);
+                contaOrganizadora, quando, null, null, null, detalhes);
+    }
+
+    public Evento comDetalhes(DetalhesEvento novosDetalhes) {
+        return new Evento(id, slug, nome, tipo, organizador, descricao, statusAprovacao, statusPublicacao,
+                dataInicio, dataFim, horarioInicio, horarioFim, entrada, cidade, local, endereco,
+                latitude, longitude, periodo, horario, artesaos, coletivos,
+                organizadorId, submetidoEm, decididoPor, decididoEm, motivoRejeicao, novosDetalhes);
+    }
+
+    public boolean foiSubmetidoPor(UUID conta) {
+        return conta != null && conta.equals(organizadorId);
     }
 
     public Evento aprovadoPor(UUID administrador, Instant quando) {
@@ -157,6 +171,6 @@ public record Evento(
         return new Evento(id, slug, nome, tipo, organizador, descricao, aprovacao, publicacao,
                 dataInicio, dataFim, horarioInicio, horarioFim, entrada, cidade, local, endereco,
                 latitude, longitude, periodo, horario, artesaos, coletivos,
-                organizadorId, submetidoEm, administrador, quando, motivo);
+                organizadorId, submetidoEm, administrador, quando, motivo, detalhes);
     }
 }

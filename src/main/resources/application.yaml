@@ -19,6 +19,8 @@ balaio:
     public-key-location: ${JWT_PUBLIC_KEY_LOCATION:}
     issuer: ${JWT_ISSUER:}
     audience: ${JWT_AUDIENCE:}
+  profile-url: ${PROFILE_SERVICE_URL:http://localhost:8082}
+  internal-token: ${BALAIO_INTERNAL_TOKEN:}
 management:
   endpoints:
     web:

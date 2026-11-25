@@ -1,5 +1,7 @@
 package br.com.balaio.events.event.infrastructure.persistence;
 
+import br.com.balaio.events.event.application.Exception.EventoJaExistenteException;
+import br.com.balaio.events.event.domain.DetalhesEvento;
 import br.com.balaio.events.event.domain.Evento;
 import br.com.balaio.events.event.domain.EventoTestBuilder;
 import br.com.balaio.events.event.domain.StatusAprovacao;
@@ -12,6 +14,8 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -78,6 +82,49 @@ class EventoPersistenciaPostgresTest {
         assertThat(slugs(adapter.buscarPorStatusAprovacao(StatusAprovacao.PENDENTE))).contains(salvo.slug());
         assertThat(slugs(adapter.buscarEventosPublicos())).doesNotContain(salvo.slug());
         assertThat(adapter.buscarEventoPublicoPorSlug(salvo.slug())).isEmpty();
+    }
+
+    @Test
+    void submissaoPersisteEnderecoDetalhadoEContatoDoOrganizador() {
+        DetalhesEvento detalhes = new DetalhesEvento("50050000", "Rua da Aurora", "S/N", "Boa Vista",
+                "Galpão 3", "Ao lado da ponte", "https://feira.example.com/inscricao",
+                "Ana Ceramista", "(81) 98888-7777", "ana@example.com");
+        Evento entrada = EventoTestBuilder.umEvento()
+                .comSlug("detalhado-" + UUID.randomUUID())
+                .comDetalhes(detalhes)
+                .build();
+
+        adapter.salvar(entrada.submetidoPor(ORGANIZADOR, Instant.now().truncatedTo(ChronoUnit.MICROS)));
+
+        Evento lido = adapter.buscarPorSlug(entrada.slug()).orElseThrow();
+        assertThat(lido.detalhes()).isEqualTo(detalhes);
+        assertThat(lido.detalhes().cep()).isEqualTo("50050-000");
+        assertThat(jdbc.queryForObject(
+                "select contato_telefone from eventos where slug = ?", String.class, entrada.slug()))
+                .isEqualTo("(81) 98888-7777");
+    }
+
+    @Test
+    void eventosAnterioresAosDetalhesContinuamLegiveisSemEles() {
+        List<Evento> demonstracao = adapter.buscarEventosPublicos().stream()
+                .filter(e -> SLUGS_DEMONSTRACAO.contains(e.slug()))
+                .toList();
+
+        assertThat(demonstracao).isNotEmpty()
+                .allSatisfy(evento -> assertThat(evento.detalhes()).isEqualTo(DetalhesEvento.VAZIO));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void gravacaoConcorrenteComSlugRepetidoViraEventoJaExistente() {
+        Evento primeiro = submeter("concorrente");
+        Evento copia = EventoTestBuilder.umEvento()
+                .comSlug(primeiro.slug())
+                .build()
+                .submetidoPor(ORGANIZADOR, Instant.now().truncatedTo(ChronoUnit.MICROS));
+
+        assertThatThrownBy(() -> adapter.salvar(copia))
+                .isInstanceOf(EventoJaExistenteException.class);
     }
 
     @Test

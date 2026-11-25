@@ -1,9 +1,11 @@
 package br.com.balaio.events.event.infrastructure.persistence;
 
+import br.com.balaio.events.event.application.Exception.EventoJaExistenteException;
 import br.com.balaio.events.event.application.port.EventoRepositoryPort;
 import br.com.balaio.events.event.domain.Evento;
 import br.com.balaio.events.event.domain.StatusAprovacao;
 import br.com.balaio.events.event.domain.StatusPublicacao;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,7 +50,8 @@ public class EventoPersistenceAdapter implements EventoRepositoryPort {
                 entity.getSubmetidoEm(),
                 entity.getDecididoPor(),
                 entity.getDecididoEm(),
-                entity.getMotivoRejeicao()
+                entity.getMotivoRejeicao(),
+                entity.getDetalhes()
         );
     }
 
@@ -80,9 +83,14 @@ public class EventoPersistenceAdapter implements EventoRepositoryPort {
     public Evento salvar(Evento evento){
         EventoJpaEntity entity = new EventoJpaEntity(evento);
 
-        EventoJpaEntity salvo = repository.save(entity);
-
-        return toDomain(salvo);
+        try {
+            return toDomain(repository.save(entity));
+        } catch (DataIntegrityViolationException violacao) {
+            if (evento.id() == null && repository.existsBySlug(evento.slug())) {
+                throw new EventoJaExistenteException();
+            }
+            throw violacao;
+        }
     }
 
     @Override
