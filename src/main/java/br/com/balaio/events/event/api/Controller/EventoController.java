@@ -99,7 +99,7 @@ public class EventoController {
                 request.horario(),
                 request.artesaos(),
                 request.coletivos()
-        );
+        ).comDetalhes(request.paraDetalhesEvento());
 
         Evento salvo = criarEventoUseCase.executar(entrada, ChamadorAutenticado.de(jwt).contaId());
 

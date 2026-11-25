@@ -1,6 +1,7 @@
 
 package br.com.balaio.events.event.api.dto;
 
+import br.com.balaio.events.event.domain.DetalhesEvento;
 import br.com.balaio.events.event.domain.Evento;
 
 import java.util.List;
@@ -18,6 +19,13 @@ public record EventoResponse(
         String cidade,
         String local,
         String endereco,
+        String cep,
+        String rua,
+        String numero,
+        String bairro,
+        String complemento,
+        String referencia,
+        String site,
         Double lat,
         Double lng,
         List<String> artesaos,
@@ -25,6 +33,7 @@ public record EventoResponse(
 ) {
 
     public static EventoResponse fromDomain(Evento evento) {
+        DetalhesEvento detalhes = evento.detalhes();
         return new EventoResponse(
                 evento.slug(),
                 evento.nome(),
@@ -37,6 +46,13 @@ public record EventoResponse(
                 evento.cidade(),
                 evento.local(),
                 evento.endereco(),
+                detalhes.cep(),
+                detalhes.rua(),
+                detalhes.numero(),
+                detalhes.bairro(),
+                detalhes.complemento(),
+                detalhes.referencia(),
+                detalhes.site(),
                 evento.latitude(),
                 evento.longitude(),
                 evento.artesaos(),

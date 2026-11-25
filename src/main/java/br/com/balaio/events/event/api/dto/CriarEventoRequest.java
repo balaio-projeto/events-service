@@ -1,6 +1,7 @@
 
 package br.com.balaio.events.event.api.dto;
 
+import br.com.balaio.events.event.domain.DetalhesEvento;
 import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
@@ -51,6 +52,51 @@ public record CriarEventoRequest(
         @Size(max = 500, message = "Use até 500 caracteres no endereço.")
         String endereco,
 
+        @Pattern(regexp = "\\s*(\\d{5}-?\\d{3})?\\s*", message = "Informe o CEP no formato 00000-000.")
+        String cep,
+
+        @NotBlank(message = "Informe a rua do evento.")
+        @Size(max = 200, message = "Use até 200 caracteres na rua.")
+        String rua,
+
+        @NotBlank(message = "Informe o número do local ou S/N.")
+        @Size(max = 20, message = "Use até 20 caracteres no número.")
+        String numero,
+
+        @NotBlank(message = "Informe o bairro do evento.")
+        @Size(max = 120, message = "Use até 120 caracteres no bairro.")
+        String bairro,
+
+        @Size(max = 120, message = "Use até 120 caracteres no complemento.")
+        String complemento,
+
+        @Size(max = 200, message = "Use até 200 caracteres no ponto de referência.")
+        String referencia,
+
+        @Size(max = 300, message = "Use até 300 caracteres no link do evento.")
+        @Pattern(
+                regexp = "\\s*(https?://[^\\s/?#]+\\S*)?\\s*",
+                flags = Pattern.Flag.CASE_INSENSITIVE,
+                message = "Informe um link começando com http:// ou https://."
+        )
+        String site,
+
+        @NotBlank(message = "Informe o nome de quem podemos contatar.")
+        @Size(max = 120, message = "Use até 120 caracteres no nome do contato.")
+        String contatoNome,
+
+        @NotBlank(message = "Informe um telefone de contato.")
+        @Size(max = 20, message = "Use até 20 caracteres no telefone.")
+        @Pattern(
+                regexp = "\\s*\\+?(?=(?:\\D*\\d){10})[\\d\\s().-]+",
+                message = "Informe um telefone com DDD, com pelo menos 10 dígitos."
+        )
+        String contatoTelefone,
+
+        @Size(max = 160, message = "Use até 160 caracteres no e-mail.")
+        @Email(regexp = "[^@\\s]+@[^@\\s]+\\.[^@\\s]+", message = "Informe um e-mail válido.")
+        String contatoEmail,
+
         @NotNull(message = "Marque o ponto do evento no mapa.")
         @DecimalMin(value = "-90.0", message = "Marque um ponto válido no mapa.")
         @DecimalMax(value = "90.0", message = "Marque um ponto válido no mapa.")
@@ -74,4 +120,9 @@ public record CriarEventoRequest(
 
         Boolean criadoPorVoce
 ) {
+
+    public DetalhesEvento paraDetalhesEvento() {
+        return new DetalhesEvento(cep, rua, numero, bairro, complemento, referencia, site,
+                contatoNome, contatoTelefone, contatoEmail);
+    }
 }

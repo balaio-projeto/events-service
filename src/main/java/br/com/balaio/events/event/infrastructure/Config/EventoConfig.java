@@ -1,10 +1,12 @@
 package br.com.balaio.events.event.infrastructure.Config;
 
+import br.com.balaio.events.event.application.port.ContatoContaPort;
 import br.com.balaio.events.event.application.port.EventoRepositoryPort;
 import br.com.balaio.events.event.application.usecase.ConsultarEventoPorSlugUseCase;
 import br.com.balaio.events.event.application.usecase.ConsultarEventosPublicosUseCase;
 import br.com.balaio.events.event.application.usecase.CriarEventoUseCase;
 import br.com.balaio.events.event.application.usecase.DecidirEventoUseCase;
+import br.com.balaio.events.event.application.usecase.IdentificarSolicitantesUseCase;
 import br.com.balaio.events.event.application.usecase.ListarEventosEmModeracaoUseCase;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,5 +39,10 @@ public class EventoConfig {
     @Bean
     public DecidirEventoUseCase decidirEventoUseCase(EventoRepositoryPort repository) {
         return new DecidirEventoUseCase(repository, Clock.systemUTC());
+    }
+
+    @Bean
+    public IdentificarSolicitantesUseCase identificarSolicitantesUseCase(ContatoContaPort contas) {
+        return new IdentificarSolicitantesUseCase(contas);
     }
 }

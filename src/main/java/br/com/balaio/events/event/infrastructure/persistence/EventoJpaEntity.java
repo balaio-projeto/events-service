@@ -1,5 +1,6 @@
 package br.com.balaio.events.event.infrastructure.persistence;
 
+import br.com.balaio.events.event.domain.DetalhesEvento;
 import br.com.balaio.events.event.domain.Evento;
 import br.com.balaio.events.event.domain.StatusAprovacao;
 import br.com.balaio.events.event.domain.StatusPublicacao;
@@ -47,6 +48,17 @@ public class EventoJpaEntity {
         this.decididoPor = evento.decididoPor();
         this.decididoEm = evento.decididoEm();
         this.motivoRejeicao = evento.motivoRejeicao();
+        DetalhesEvento detalhes = evento.detalhes();
+        this.cep = detalhes.cep();
+        this.rua = detalhes.rua();
+        this.numero = detalhes.numero();
+        this.bairro = detalhes.bairro();
+        this.complemento = detalhes.complemento();
+        this.referencia = detalhes.referencia();
+        this.site = detalhes.site();
+        this.contatoNome = detalhes.contatoNome();
+        this.contatoTelefone = detalhes.contatoTelefone();
+        this.contatoEmail = detalhes.contatoEmail();
     }
 
     @Id
@@ -134,6 +146,36 @@ public class EventoJpaEntity {
 
     @Column(name = "motivo_rejeicao", columnDefinition = "TEXT")
     private String motivoRejeicao;
+
+    @Column(name = "cep", length = 9)
+    private String cep;
+
+    @Column(name = "rua", length = 200)
+    private String rua;
+
+    @Column(name = "numero", length = 20)
+    private String numero;
+
+    @Column(name = "bairro", length = 120)
+    private String bairro;
+
+    @Column(name = "complemento", length = 120)
+    private String complemento;
+
+    @Column(name = "referencia", length = 200)
+    private String referencia;
+
+    @Column(name = "site", length = 300)
+    private String site;
+
+    @Column(name = "contato_nome", length = 120)
+    private String contatoNome;
+
+    @Column(name = "contato_telefone", length = 20)
+    private String contatoTelefone;
+
+    @Column(name = "contato_email", length = 160)
+    private String contatoEmail;
 
     public Long getId() {
         return id;
@@ -241,5 +283,10 @@ public class EventoJpaEntity {
 
     public String getMotivoRejeicao() {
         return motivoRejeicao;
+    }
+
+    public DetalhesEvento getDetalhes() {
+        return new DetalhesEvento(cep, rua, numero, bairro, complemento, referencia, site,
+                contatoNome, contatoTelefone, contatoEmail);
     }
 }
